@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>VoiceForge Studio</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%23111'/><path d='M7 18v-4M11 22V10M15 25V7M19 21v-10M23 18v-4' stroke='white' stroke-width='2.4' stroke-linecap='round'/></svg>" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+<div class="shell">
+  <aside class="sidebar" id="sidebar">
+    <div class="brand">
+      <svg viewBox="0 0 32 32" width="28" height="28"><rect width="32" height="32" rx="8" fill="currentColor"/><path d="M7 18v-4M11 22V10M15 25V7M19 21v-10M23 18v-4" stroke="var(--bg)" stroke-width="2.4" stroke-linecap="round"/></svg>
+      <span>VoiceForge</span>
+    </div>
+    <nav>
+      <a data-view="tts" class="active"><i>✦</i>Text to Speech</a>
+      <a data-view="dialogue"><i>☷</i>Dialogue Studio</a>
+      <a data-view="library"><i>◉</i>Voice Library</a>
+      <a data-view="lab"><i>⚗</i>Voice Lab</a>
+      <a data-view="pron"><i>Aa</i>Pronunciation</a>
+      <a data-view="history"><i>↺</i>History</a>
+      <a data-view="api"><i>{}</i>API</a>
+    </nav>
+    <div class="side-foot">
+      <div class="pill ok" id="engineStatus">Engine: checking…</div>
+      <button class="ghost small" id="themeBtn" title="Toggle theme">◐ Theme</button>
+    </div>
+  </aside>
+
+  <main>
+    <header class="topbar">
+      <button class="ghost icon mobile-only" id="menuBtn" aria-label="Menu">☰</button>
+      <h1 id="viewTitle">Text to Speech</h1>
+      <div class="top-right"><span class="muted small">Unlimited · Local · Private</span></div>
+    </header>
+
+    <!-- ============ TTS + DIALOGUE ============ -->
+    <section class="view" id="view-tts">
+      <div class="workspace">
+        <div class="editor-col">
+          <div class="mode-tabs">
+            <button data-mode="tts" class="active">Single voice</button>
+            <button data-mode="dialogue">Multi-speaker dialogue</button>
+          </div>
+          <div class="toolbar">
+            <button class="chip" data-insert="[pause 1s]" title="Insert a pause">⏸ Pause</button>
+            <button class="chip" data-insert="[speed 1.15]" title="Change speed for the rest of the line">⏩ Speed</button>
+            <button class="chip" data-insert="[voice bf_emma]" title="Switch voice for the rest of the line">🎙 Voice</button>
+            <button class="chip" id="sampleBtn" title="Load an example">✎ Example</button>
+            <button class="chip" id="clearBtn">✕ Clear</button>
+            <label class="chip file">⤒ Import .txt<input type="file" id="importFile" accept=".txt,.md,.srt" hidden /></label>
+          </div>
+          <textarea id="text" spellcheck="true" placeholder="Start typing or paste your script here…"></textarea>
+          <div class="editor-foot">
+            <span id="charCount">0 characters</span>
+            <span id="estimate" class="muted"></span>
+          </div>
+
+          <div id="castPanel" class="card cast hidden">
+            <div class="card-h"><b>Cast</b><span class="muted small">Write lines as <code>Name: text</code>. Each speaker gets a voice.</span></div>
+            <div id="castList"></div>
+          </div>
+
+          <div class="generate-row">
+            <button class="primary big" id="generateBtn">Generate speech <kbd>Ctrl ↵</kbd></button>
+            <div class="progress hidden" id="progress"><div id="progressBar"></div><span id="progressText"></span></div>
+          </div>
+
+          <div class="card player hidden" id="player">
+            <div class="player-top">
+              <button class="play" id="playBtn" aria-label="Play">▶</button>
+              <div class="pinfo">
+                <div class="ptitle" id="pTitle"></div>
+                <div class="muted small" id="pMeta"></div>
+              </div>
+              <div class="dl">
+                <button class="ghost" id="dlBtn">Download ▾</button>
+                <div class="menu hidden" id="dlMenu">
+                  <a data-fmt="mp3">MP3 · 192 kbps</a><a data-fmt="wav">WAV · 16-bit</a><a data-fmt="flac">FLAC · lossless</a><a data-fmt="ogg">OGG Opus</a>
+                  <hr /><a data-cap="srt">Subtitles · SRT</a><a data-cap="vtt">Subtitles · VTT</a><a data-cap="json">Timings · JSON</a>
+                </div>
+              </div>
+            </div>
+            <canvas id="wave" height="72"></canvas>
+            <div class="ptime"><span id="tCur">0:00</span><span id="tDur">0:00</span></div>
+            <div class="transcript" id="transcript"></div>
+            <audio id="audio" preload="auto"></audio>
+          </div>
+        </div>
+
+        <aside class="settings card">
+          <div class="field">
+            <label>Voice</label>
+            <div class="row">
+              <select id="voice"></select>
+              <button class="ghost icon" id="previewVoice" title="Preview voice">▶</button>
+            </div>
+            <div class="muted small" id="voiceDesc"></div>
+          </div>
+          <div class="field">
+            <label>Language <span class="muted">(auto from voice)</span></label>
+            <select id="language"><option value="">Auto-detect from voice</option></select>
+          </div>
+          <div class="field">
+            <label>Speed <output id="speedOut">1.00×</output></label>
+            <input type="range" id="speed" min="0.5" max="2" step="0.05" value="1" />
+            <div class="scale"><span>Slower</span><span>Faster</span></div>
+          </div>
+          <div class="field">
+            <label>Pacing between sentences <output id="pacingOut">1.00×</output></label>
+            <input type="range" id="pacing" min="0" max="2.5" step="0.05" value="1" />
+            <div class="scale"><span>Tight</span><span>Relaxed</span></div>
+          </div>
+          <div class="field">
+            <label>Paragraph pause <output id="paraOut">0.75 s</output></label>
+            <input type="range" id="para" min="0" max="3" step="0.05" value="0.75" />
+          </div>
+          <div class="field">
+            <label>Loudness target</label>
+            <select id="lufs">
+              <option value="-14">−14 LUFS · YouTube / Spotify</option>
+              <option value="-16" selected>−16 LUFS · Podcast / voiceover</option>
+              <option value="-19">−19 LUFS · Audiobook (ACX-safe)</option>
+              <option value="-23">−23 LUFS · Broadcast (EBU R128)</option>
+              <option value="">Off · raw model output</option>
+            </select>
+          </div>
+          <label class="toggle"><input type="checkbox" id="polish" checked /><span></span>Studio polish (leveling + limiter)</label>
+          <label class="toggle"><input type="checkbox" id="usePron" checked /><span></span>Apply pronunciation dictionary</label>
+          <div class="muted small hint">
+            Tags: <code>[pause 1.5s]</code> <code>&lt;break time="1s"/&gt;</code> <code>[speed 0.9]</code> <code>[voice am_michael]</code>. Blend voices with <code>af_heart*0.6+bf_emma*0.4</code>.
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <!-- ============ LIBRARY ============ -->
+    <section class="view hidden" id="view-library">
+      <div class="filters">
+        <input id="libSearch" placeholder="Search voices, styles, accents…" />
+        <select id="libLang"><option value="">All languages</option></select>
+        <select id="libGender"><option value="">Any gender</option><option value="female">Female</option><option value="male">Male</option></select>
+      </div>
+      <div class="grid" id="libGrid"></div>
+    </section>
+
+    <!-- ============ LAB ============ -->
+    <section class="view hidden" id="view-lab">
+      <div class="lab">
+        <div class="card">
+          <div class="card-h"><b>Design a new voice</b><span class="muted small">Blend up to 5 voices. Weights are normalised automatically.</span></div>
+          <div id="mixRows"></div>
+          <button class="ghost" id="addMix">+ Add voice</button>
+          <div class="field"><label>Formula</label><code id="formula" class="formula"></code></div>
+          <div class="field"><label>Test sentence</label><input id="labText" value="Every voice tells a story. This one is entirely new." /></div>
+          <div class="row gap">
+            <button class="ghost" id="labPreview">▶ Preview blend</button>
+            <input id="labName" placeholder="Voice name" />
+            <button class="primary" id="labSave">Save voice</button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-h"><b>My voices</b></div>
+          <div id="customList" class="list"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ PRONUNCIATION ============ -->
+    <section class="view hidden" id="view-pron">
+      <div class="card">
+        <div class="card-h"><b>Pronunciation dictionary</b><span class="muted small">Applies to every generation. Use an <b>alias</b> (spell it how it sounds) or exact <b>IPA</b> phonemes.</span></div>
+        <table class="ptable"><thead><tr><th>Word / phrase</th><th>Type</th><th>Say it as</th><th>Case</th><th></th><th></th></tr></thead><tbody id="pronBody"></tbody></table>
+        <div class="row gap"><button class="ghost" id="pronAdd">+ Add rule</button><button class="primary" id="pronSave">Save dictionary</button><span id="pronMsg" class="muted small"></span></div>
+      </div>
+    </section>
+
+    <!-- ============ HISTORY ============ -->
+    <section class="view hidden" id="view-history">
+      <div class="filters"><input id="histSearch" placeholder="Search history…" /></div>
+      <div id="histList" class="list"></div>
+    </section>
+
+    <!-- ============ API ============ -->
+    <section class="view hidden" id="view-api">
+      <div class="card doc">
+        <h3>Drop-in compatible APIs</h3>
+        <p>Point existing ElevenLabs or OpenAI integrations at this server. Set <code>VF_API_KEY</code> to require a key (<code>xi-api-key</code> header or <code>Authorization: Bearer</code>).</p>
+        <h4>ElevenLabs-style</h4>
+        <pre id="apiEl"></pre>
+        <h4>OpenAI-style</h4>
+        <pre id="apiOa"></pre>
+        <h4>Full studio render (dialogue, tags, mastering)</h4>
+        <pre id="apiNative"></pre>
+        <p>Interactive docs: <a href="/docs" target="_blank">/docs</a></p>
+      </div>
+    </section>
+  </main>
+</div>
+<div class="toast hidden" id="toast"></div>
+<script src="app.js"></script>
+</body>
+</html>
